@@ -72,7 +72,7 @@ class DataSet(object):
             output.append(self.data[i])
         yield output
 
-def deal_padding(data,batch_first=True):
+def deal_padding(data,batch_first=True,):
     # for raw in data:
     #     print(len(raw[0]),raw[1])
     data = sorted(data,key=lambda x:len(x[0]),reverse=True)
@@ -84,14 +84,11 @@ def deal_padding(data,batch_first=True):
         length = len(data[i][0])
         seq_len.append(length)
         y_lable.append(data[i][1])
-        print(torch.FloatTensor(data[i][0]))
         zeros[i,0:length] = torch.IntTensor(data[i][0])
-    print(seq_len)
-    print(zeros)
-    pack=pack_padded_sequence(zeros,seq_len,batch_first=True)
-    print(pack)
-    print(y_lable)
-    return pack,torch.Tensor(y_lable)
+
+    # pack=pack_padded_sequence(zeros,seq_len,batch_first=True)
+
+    return zeros,torch.Tensor(y_lable)
 
 
 if __name__ == '__main__':
