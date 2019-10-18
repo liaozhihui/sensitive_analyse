@@ -4,11 +4,13 @@ import jieba
 import re
 import random
 import torch
+import numpy as np
 from torch.nn.utils.rnn import pack_padded_sequence
 
 
 file = os.path.dirname(os.path.abspath(__file__))
 train_data = pd.read_csv(file+"/data/Train/Train_DataSet.csv")
+test_data = pd.read_csv(file+"/data/Test/Test_DataSet.csv")
 label_data = pd.read_csv(file+"/data/Train/Train_DataSet_Label.csv")
 result=pd.merge(train_data,label_data,how="left",on='id')[['title',"label"]]
 Train = result.dropna().values
@@ -63,6 +65,7 @@ class DataSet(object):
         return data
 
     def get_batch_shuffle(self,batch_size):
+        print(len(self.indexs))
         if len(self.indexs)<batch_size:
             raise StopIteration
         outindex=random.sample(self.indexs, batch_size)
@@ -71,6 +74,23 @@ class DataSet(object):
             self.indexs.remove(i)
             output.append(self.data[i])
         yield output
+
+class TestDataSet(object):
+    def __init__(self, word2index, stopwords,data):
+        self.word2index = word2index
+        self.stopwords = stopwords
+        self.data = data
+
+    def cut_word(self):
+        data = list()
+        for raw in self.data:
+            sentence = raw[1]
+            wordlist=[word for word in jieba.cut(re.sub(r'[A-Za-z0-9]|/d+', '', sentence.replace(r"\.+", "").replace(u'\u3000', u'').replace(u'\xa0', u' '))) if word not in self.stopwords]
+            indexlist = list(map(lambda x:self.word2index.get(x,1),wordlist))
+            result = [raw[0],raw[1],indexlist]
+            data.append(result)
+        return data
+
 
 def deal_padding(data,batch_first=True,):
     # for raw in data:
@@ -89,19 +109,28 @@ def deal_padding(data,batch_first=True,):
     # pack=pack_padded_sequence(zeros,seq_len,batch_first=True)
 
     return zeros,torch.Tensor(y_lable)
-
-
+Test = pd.read_csv(file + "/data/Test/Test_DataSet.csv").values
+word2index={}
+with open("word2index.csv", "r") as f:
+    for line in f.readlines():
+        result = line.split(",")
+        word2index[result[0]] = int(result[1].strip())
+Test_data = TestDataSet(word2index, stopwords,Test).cut_word()
 if __name__ == '__main__':
     word2index={}
     with open("word2index.csv", "r") as f:
         for line in f.readlines():
             result = line.split(",")
             word2index[result[0]] = int(result[1].strip())
-    data = DataSet(word2index, stopwords,Train)
-    # for i in range(1000):
-    #     print(next(data.get_batch_shuffle(1000)))
-    result = next(data.get_batch_shuffle(10))
-    deal_padding(result)
+    # data = DataSet(word2index, stopwords,Test)
+    # # for i in range(1000):
+    # #     print(next(data.get_batch_shuffle(1000)))
+    # result = next(data.get_batch_shuffle(10))
+    # deal_padding(result)
+    Test = pd.read_csv(file + "/data/Test/Test_DataSet.csv").values
+
+    print(data)
+
 
 
 

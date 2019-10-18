@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
 import numpy as np
-from datautils import DataSet,Train,stopwords,deal_padding
+from datautils import DataSet,Train,stopwords,deal_padding,Test_data
 from torch.nn.utils.rnn import pad_packed_sequence
 class SentimentRNN(nn.Module):
 
@@ -78,7 +78,7 @@ embedding_dim = 512
 hidden_dim = 256
 n_layers = 1
 bidirectional = False
-net = SentimentRNN(vocab_size,output_size,embedding_dim,hidden_dim,n_layers,bidirectional)
+net_model = SentimentRNN(vocab_size,output_size,embedding_dim,hidden_dim,n_layers,bidirectional)
 
 
 def train(net,batch_size,train_loader):
@@ -113,10 +113,10 @@ def train(net,batch_size,train_loader):
 
             net.zero_grad()
 
-            output,h = net(inputs,h)
-            loss = criterion(output,labels.long())
+            output, h = net(inputs, h)
+            loss = criterion(output, labels.long())
             loss.backward()
-            nn.utils.clip_grad_norm(net.parameters(),clip)
+            nn.utils.clip_grad_norm(net.parameters() ,clip)
             optimizer.step()
 
             if counter % 50 == 0:
@@ -127,9 +127,41 @@ def train(net,batch_size,train_loader):
                       "Step:{}...".format(counter),
                       "Loss:{:.6f}...".format(loss.item()),
                       "precision:{:.3f}".format(pre))
+    torch.save(net,"./model/sentivite.pkl")
+
+
+def evaliate(test_data):
+    net = torch.load("model/sentivite.pkl")
+    net.eval()
 
 
 
 
 if __name__ == '__main__':
-    train(net,16,data)
+    # train(net_model,64,data)
+    net = torch.load("model/sentivite.pkl")
+    print(net)
+    net.eval()
+    h = net.init_hidden(1)
+    result = dict()
+
+    for data in Test_data:
+
+        value = torch.LongTensor(np.array([data[-1]]))
+
+        if value.size(1)>=1:
+
+            output,h=net(value.cuda(),h)
+            result[data[0]] = output.argmax().item()
+        else:
+            result[data[0]]=-1
+    import csv
+    with open("result.csv", 'a') as f:
+        f_csv = csv.writer(f)
+        for k,v in result.items():
+            f_csv.writerow([k,v])
+
+
+
+
+
